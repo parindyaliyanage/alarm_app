@@ -1,3 +1,6 @@
+import 'package:alarm_app/data/repositories/alarm_repository.dart';
+import 'package:alarm_app/features/alarm_setup/bloc/alarm_setup_bloc.dart';
+import 'package:alarm_app/features/alarm_setup/view/alarm_setup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/alarm_list_bloc.dart';
@@ -26,7 +29,6 @@ class AlarmListScreen extends StatelessWidget {
       ),
       body: BlocBuilder<AlarmListBloc, AlarmListState>(
         builder: (context, state) {
-
           if (state is AlarmListLoading) {
             return const Center(
               child: CircularProgressIndicator(color: Colors.deepPurple),
@@ -53,15 +55,24 @@ class AlarmListScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // Navigate to alarm setup screen (Step 4)
+        onPressed: () async {
+          final saved = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlocProvider(
+                create: (_) => AlarmSetupBloc(AlarmRepository()),
+                child: const AlarmSetupScreen(),
+              ),
+            ),
+          );
+          // Refresh list if alarm was saved
+          if (saved == true && context.mounted) {
+            context.read<AlarmListBloc>().add(const LoadAlarms());
+          }
         },
         backgroundColor: Colors.deepPurple,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Add Alarm',
-          style: TextStyle(color: Colors.white),
-        ),
+        label: const Text('Add Alarm', style: TextStyle(color: Colors.white)),
       ),
     );
   }
@@ -140,8 +151,10 @@ class _AlarmCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 // Challenge type badge
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: alarm.challengeType == AppConstants.mathChallenge
                         ? Colors.orange.withOpacity(0.2)
@@ -166,9 +179,9 @@ class _AlarmCard extends StatelessWidget {
                 value: alarm.isEnabled,
                 activeColor: Colors.deepPurple,
                 onChanged: (value) {
-                  context
-                      .read<AlarmListBloc>()
-                      .add(ToggleAlarm(alarm.id, value));
+                  context.read<AlarmListBloc>().add(
+                    ToggleAlarm(alarm.id, value),
+                  );
                 },
               ),
               IconButton(
@@ -187,14 +200,21 @@ class _AlarmCard extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF16213E),
-        title: const Text('Delete alarm?',
-            style: TextStyle(color: Colors.white)),
-        content: const Text('This alarm will be removed.',
-            style: TextStyle(color: Colors.white54)),
+        title: const Text(
+          'Delete alarm?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'This alarm will be removed.',
+          style: TextStyle(color: Colors.white54),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white54),
+            ),
           ),
           TextButton(
             onPressed: () {
