@@ -1,3 +1,4 @@
+import 'package:alarm_app/services/alarm_scheduler_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../../data/models/alarm_model.dart';
@@ -9,7 +10,6 @@ class AlarmSetupBloc extends Bloc<AlarmSetupEvent, AlarmSetupState> {
   final AlarmRepository _repository;
 
   AlarmSetupBloc(this._repository) : super(const AlarmSetupState()) {
-
     on<TimeChanged>((event, emit) {
       emit(state.copyWith(hour: event.hour, minute: event.minute));
     });
@@ -33,7 +33,7 @@ class AlarmSetupBloc extends Bloc<AlarmSetupEvent, AlarmSetupState> {
       emit(state.copyWith(isSaving: true));
       try {
         final alarm = AlarmModel(
-          id: const Uuid().v4(), // unique ID
+          id: const Uuid().v4(),
           hour: state.hour,
           minute: state.minute,
           label: state.label,
@@ -42,12 +42,18 @@ class AlarmSetupBloc extends Bloc<AlarmSetupEvent, AlarmSetupState> {
           challengeType: state.challengeType,
         );
         await _repository.saveAlarm(alarm);
+
+        // Schedule the actual alarm ← new line
+        await AlarmSchedulerService.scheduleAlarm(alarm);
+
         emit(state.copyWith(isSaving: false, isSaved: true));
       } catch (e) {
-        emit(state.copyWith(
-          isSaving: false,
-          errorMessage: 'Failed to save alarm: $e',
-        ));
+        emit(
+          state.copyWith(
+            isSaving: false,
+            errorMessage: 'Failed to save alarm: $e',
+          ),
+        );
       }
     });
   }
