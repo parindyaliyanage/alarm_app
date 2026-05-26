@@ -1,5 +1,4 @@
 import 'package:equatable/equatable.dart';
-import '../../../data/models/alarm_model.dart';
 
 abstract class AlarmListEvent extends Equatable {
   const AlarmListEvent();
