@@ -1,4 +1,7 @@
+import 'package:alarm_app/features/alarm_trigger/bloc/alarm_trigger_bloc.dart';
+import 'package:alarm_app/features/alarm_trigger/view/alarm_trigger_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:io';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
@@ -33,7 +36,19 @@ void main() async {
     android: androidSettings,
     iOS: iosSettings,
   );
-  await notificationsPlugin.initialize(settings: initSettings);
+  await notificationsPlugin.initialize(
+    settings: initSettings,
+    onDidReceiveNotificationResponse: (response) {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (_) => BlocProvider(
+            create: (_) => AlarmTriggerBloc(),
+            child: const AlarmTriggerScreen(),
+          ),
+        ),
+      );
+    },
+  );
 
   // Platform-specific setup
   if (Platform.isAndroid) {
