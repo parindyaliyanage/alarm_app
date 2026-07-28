@@ -145,7 +145,7 @@ class _TimePickerSection extends StatelessWidget {
   }
 }
 
-// ── Label ────────────────────────────────────────────
+// Label 
 class _LabelSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -182,7 +182,7 @@ class _LabelSection extends StatelessWidget {
   }
 }
 
-// ── Repeat Days ──────────────────────────────────────
+// Repeat Days 
 class _RepeatDaysSection extends StatelessWidget {
   static const _days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
