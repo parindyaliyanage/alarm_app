@@ -3,27 +3,38 @@ import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../core/constants/app_constants.dart';
 import '../data/models/alarm_model.dart';
+import 'foreground_alarm_service.dart';
 
-// Global audio player for background alarm sound
+// Global player lives at top level — survives in background isolate
 AudioPlayer? _backgroundPlayer;
 
 @pragma('vm:entry-point')
 void alarmCallback(int id) async {
   if (!Platform.isAndroid) return;
 
-  // ── 1. Start alarm sound immediately ──
+  // ── 1. Play sound IMMEDIATELY ──
   _backgroundPlayer = AudioPlayer();
   await _backgroundPlayer!.setReleaseMode(ReleaseMode.loop);
   await _backgroundPlayer!.play(AssetSource('sounds/alarm.mp3'));
 
-  // ── 2. Show notification ──
-  final notifications = FlutterLocalNotificationsPlugin();
+  // ── 2. Mark alarm as active in Hive ──
+  await Hive.initFlutter();
+  final activeBox = await Hive.openBox(AppConstants.activeAlarmBox);
+  await activeBox.put(AppConstants.activeAlarmKey, true);
 
+  // ── 3. Start foreground service to survive app clear ──
+  ForegroundAlarmService.init();
+  await ForegroundAlarmService.startAlarm();
+
+  // ── 4. Show fullscreen notification ──
+  final notifications = FlutterLocalNotificationsPlugin();
   const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
   await notifications.initialize(
-  settings: const InitializationSettings(android: androidSettings),
-);
+    settings: const InitializationSettings(android: androidSettings),
+  );
 
   const androidDetails = AndroidNotificationDetails(
     'alarm_channel',
@@ -36,8 +47,8 @@ void alarmCallback(int id) async {
     visibility: NotificationVisibility.public,
     playSound: false,      // we handle sound ourselves
     enableVibration: true,
-    ongoing: true,         // user can't swipe away
-    autoCancel: false,     // stays until we cancel it
+    ongoing: true,
+    autoCancel: false,
   );
 
   await notifications.show(
@@ -49,7 +60,7 @@ void alarmCallback(int id) async {
   );
 }
 
-// Call this when alarm is dismissed to stop background sound
+// Called from AlarmTriggerBloc when challenge screen opens
 Future<void> stopBackgroundAlarm() async {
   await _backgroundPlayer?.stop();
   await _backgroundPlayer?.dispose();
@@ -62,7 +73,6 @@ class AlarmSchedulerService {
     if (!Platform.isAndroid) return;
 
     final scheduledTime = _nextAlarmTime(alarm.hour, alarm.minute);
-
     await AndroidAlarmManager.oneShotAt(
       scheduledTime,
       _alarmId(alarm.id),
@@ -71,15 +81,14 @@ class AlarmSchedulerService {
       wakeup: true,
       rescheduleOnReboot: true,
     );
-
     debugPrint('Alarm scheduled for $scheduledTime');
   }
 
   static Future<void> cancelAlarm(String alarmId) async {
     if (!Platform.isAndroid) return;
-
     await AndroidAlarmManager.cancel(_alarmId(alarmId));
     await stopBackgroundAlarm();
+    await ForegroundAlarmService.stopAlarm();
     debugPrint('Alarm cancelled: $alarmId');
   }
 

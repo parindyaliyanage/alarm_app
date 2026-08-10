@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import '../../../core/constants/app_constants.dart';
 
 class AlarmSetupState extends Equatable {
+  final String? editingAlarmId;
   final int hour;
   final int minute;
   final String label;
@@ -12,6 +13,7 @@ class AlarmSetupState extends Equatable {
   final String? errorMessage;
 
   const AlarmSetupState({
+    this.editingAlarmId, 
     this.hour = 7,
     this.minute = 0,
     this.label = '',
@@ -21,6 +23,8 @@ class AlarmSetupState extends Equatable {
     this.isSaved = false,
     this.errorMessage,
   });
+
+  bool get isEditing => editingAlarmId != null;
 
   // Helper to create a modified copy
   AlarmSetupState copyWith({

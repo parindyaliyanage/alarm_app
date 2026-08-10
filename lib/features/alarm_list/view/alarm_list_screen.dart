@@ -1,16 +1,47 @@
 import 'package:alarm_app/data/repositories/alarm_repository.dart';
 import 'package:alarm_app/features/alarm_setup/bloc/alarm_setup_bloc.dart';
+import 'package:alarm_app/features/alarm_setup/bloc/alarm_setup_event.dart';
 import 'package:alarm_app/features/alarm_setup/view/alarm_setup_screen.dart';
+import 'package:alarm_app/features/alarm_trigger/bloc/alarm_trigger_bloc.dart';
+import 'package:alarm_app/features/alarm_trigger/view/alarm_trigger_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../bloc/alarm_list_bloc.dart';
 import '../bloc/alarm_list_event.dart';
 import '../bloc/alarm_list_state.dart';
 import '../../../data/models/alarm_model.dart';
 import '../../../core/constants/app_constants.dart';
 
-class AlarmListScreen extends StatelessWidget {
+class AlarmListScreen extends StatefulWidget {
   const AlarmListScreen({super.key});
+
+  @override
+  State<AlarmListScreen> createState() => _AlarmListScreenState();
+}
+
+class _AlarmListScreenState extends State<AlarmListScreen>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Rebuild when app comes to foreground
+    if (state == AppLifecycleState.resumed) {
+      setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,32 +58,113 @@ class AlarmListScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: BlocBuilder<AlarmListBloc, AlarmListState>(
-        builder: (context, state) {
-          if (state is AlarmListLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.deepPurple),
-            );
-          }
+      body: Column(
+        children: [
+          // ── Active alarm banner ──
+          ValueListenableBuilder(
+            valueListenable: Hive.box(AppConstants.activeAlarmBox).listenable(),
+            builder: (context, box, _) {
+              final isRinging = box.get(
+                AppConstants.activeAlarmKey,
+                defaultValue: false,
+              );
 
-          if (state is AlarmListError) {
-            return Center(
-              child: Text(
-                state.message,
-                style: const TextStyle(color: Colors.red),
-              ),
-            );
-          }
+              if (!isRinging) return const SizedBox.shrink();
 
-          if (state is AlarmListLoaded) {
-            if (state.alarms.isEmpty) {
-              return _buildEmptyState();
-            }
-            return _buildAlarmList(context, state.alarms);
-          }
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider(
+                        create: (_) => AlarmTriggerBloc(),
+                        child: const AlarmTriggerScreen(),
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurple,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.deepPurple.withOpacity(0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.alarm, color: Colors.white, size: 28),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '⏰ Alarm is ringing!',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Tap to solve the challenge',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
 
-          return const SizedBox.shrink();
-        },
+          // ── Alarm list ──
+          Expanded(
+            child: BlocBuilder<AlarmListBloc, AlarmListState>(
+              builder: (context, state) {
+                if (state is AlarmListLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.deepPurple),
+                  );
+                }
+                if (state is AlarmListError) {
+                  return Center(
+                    child: Text(
+                      state.message,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  );
+                }
+                if (state is AlarmListLoaded) {
+                  if (state.alarms.isEmpty) {
+                    return _buildEmptyState();
+                  }
+                  return _buildAlarmList(context, state.alarms);
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
@@ -65,7 +177,6 @@ class AlarmListScreen extends StatelessWidget {
               ),
             ),
           );
-          // Refresh list if alarm was saved
           if (saved == true && context.mounted) {
             context.read<AlarmListBloc>().add(const LoadAlarms());
           }
@@ -116,83 +227,94 @@ class _AlarmCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF16213E),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: alarm.isEnabled
-              ? Colors.deepPurple.withOpacity(0.5)
-              : Colors.white12,
+    return GestureDetector(
+      onTap: () => _openEditScreen(context), // ← tap whole card to edit
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF16213E),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: alarm.isEnabled
+                ? Colors.deepPurple.withValues(alpha: 0.5)
+                : Colors.white12,
+          ),
         ),
-      ),
-      child: Row(
-        children: [
-          // Time + label
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    alarm.formattedTime,
+                    style: TextStyle(
+                      color: alarm.isEnabled ? Colors.white : Colors.white38,
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    alarm.label.isEmpty ? 'Alarm' : alarm.label,
+                    style: const TextStyle(color: Colors.white54, fontSize: 14),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: alarm.challengeType == AppConstants.mathChallenge
+                          ? Colors.orange.withValues(alpha: 0.2)
+                          : Colors.blue.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      alarm.challengeType == AppConstants.mathChallenge
+                          ? '🧮 Math'
+                          : '📷 Object',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
               children: [
-                Text(
-                  alarm.formattedTime,
-                  style: TextStyle(
-                    color: alarm.isEnabled ? Colors.white : Colors.white38,
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Switch(
+                  value: alarm.isEnabled,
+                  activeColor: Colors.deepPurple,
+                  onChanged: (value) {
+                    context.read<AlarmListBloc>().add(ToggleAlarm(alarm.id, value));
+                  },
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  alarm.label.isEmpty ? 'Alarm' : alarm.label,
-                  style: const TextStyle(color: Colors.white54, fontSize: 14),
-                ),
-                const SizedBox(height: 6),
-                // Challenge type badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: alarm.challengeType == AppConstants.mathChallenge
-                        ? Colors.orange.withOpacity(0.2)
-                        : Colors.blue.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    alarm.challengeType == AppConstants.mathChallenge
-                        ? '🧮 Math'
-                        : '📷 Object',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.white30),
+                  onPressed: () => _confirmDelete(context, alarm.id),
                 ),
               ],
             ),
-          ),
-
-          // Toggle + delete
-          Column(
-            children: [
-              Switch(
-                value: alarm.isEnabled,
-                activeColor: Colors.deepPurple,
-                onChanged: (value) {
-                  context.read<AlarmListBloc>().add(
-                    ToggleAlarm(alarm.id, value),
-                  );
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.white30),
-                onPressed: () => _confirmDelete(context, alarm.id),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _openEditScreen(BuildContext context) async {
+    final listBloc = context.read<AlarmListBloc>();
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (_) => AlarmSetupBloc(AlarmRepository())
+            ..add(LoadAlarmForEdit(alarm)), // ← pre-fill with alarm data
+          child: const AlarmSetupScreen(),
+        ),
+      ),
+    );
+    if (saved == true) {
+      listBloc.add(const LoadAlarms());
+    }
   }
 
   void _confirmDelete(BuildContext context, String alarmId) {
@@ -200,21 +322,12 @@ class _AlarmCard extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF16213E),
-        title: const Text(
-          'Delete alarm?',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'This alarm will be removed.',
-          style: TextStyle(color: Colors.white54),
-        ),
+        title: const Text('Delete alarm?', style: TextStyle(color: Colors.white)),
+        content: const Text('This alarm will be removed.', style: TextStyle(color: Colors.white54)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white54),
-            ),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
           ),
           TextButton(
             onPressed: () {

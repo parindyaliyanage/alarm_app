@@ -1,20 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Alarm permissions -->
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
-
-    <!-- Wake lock — keep screen on -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
-
-    <!-- Fullscreen over lock screen -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
-
-    <!-- Camera (for object detection later) -->
     <uses-permission android:name="android.permission.CAMERA"/>
-
-    <!-- Vibration -->
     <uses-permission android:name="android.permission.VIBRATE"/>
 
     <application
@@ -27,6 +21,16 @@
             android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmService"
             android:permission="android.permission.BIND_JOB_SERVICE"
             android:exported="false"/>
+
+        <!-- Foreground service — keeps alarm alive when app is cleared -->
+        <service
+            android:name="com.pravera.flutter_foreground_task.service.ForegroundTaskService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="alarm"/>
+        </service>
 
         <receiver
             android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmBroadcastReceiver"
@@ -41,7 +45,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- Single MainActivity — merged with wake/lock screen flags -->
+        <!-- Single MainActivity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"

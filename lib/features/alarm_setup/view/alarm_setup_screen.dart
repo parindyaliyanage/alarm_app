@@ -30,9 +30,16 @@ class AlarmSetupScreen extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: const Color(0xFF1A1A2E),
           iconTheme: const IconThemeData(color: Colors.white),
-          title: const Text(
-            'New Alarm',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          title: BlocBuilder<AlarmSetupBloc, AlarmSetupState>(
+            builder: (context, state) {
+              return Text(
+                state.isEditing ? 'Edit Alarm' : 'New Alarm', // ← dynamic title
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              );
+            },
           ),
           actions: [
             BlocBuilder<AlarmSetupBloc, AlarmSetupState>(
@@ -40,7 +47,9 @@ class AlarmSetupScreen extends StatelessWidget {
                 return TextButton(
                   onPressed: state.isSaving
                       ? null
-                      : () => context.read<AlarmSetupBloc>().add(const SaveAlarm()),
+                      : () => context.read<AlarmSetupBloc>().add(
+                          const SaveAlarm(),
+                        ),
                   child: state.isSaving
                       ? const SizedBox(
                           width: 20,
@@ -108,8 +117,8 @@ class _TimePickerSection extends StatelessWidget {
             );
             if (picked != null && context.mounted) {
               context.read<AlarmSetupBloc>().add(
-                    TimeChanged(picked.hour, picked.minute),
-                  );
+                TimeChanged(picked.hour, picked.minute),
+              );
             }
           },
           child: Container(
@@ -145,44 +154,65 @@ class _TimePickerSection extends StatelessWidget {
   }
 }
 
-// Label 
-class _LabelSection extends StatelessWidget {
+// In _LabelSection — replace StatelessWidget with StatefulWidget
+class _LabelSection extends StatefulWidget {
+  @override
+  State<_LabelSection> createState() => _LabelSectionState();
+}
+
+class _LabelSectionState extends State<_LabelSection> {
+  late TextEditingController _controller;
+  bool _initialized = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Label',
-          style: TextStyle(color: Colors.white70, fontSize: 14),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          onChanged: (value) =>
-              context.read<AlarmSetupBloc>().add(LabelChanged(value)),
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'e.g. Morning alarm',
-            hintStyle: const TextStyle(color: Colors.white24),
-            filled: true,
-            fillColor: const Color(0xFF16213E),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+    return BlocBuilder<AlarmSetupBloc, AlarmSetupState>(
+      builder: (context, state) {
+        // Initialize controller once with existing label
+        if (!_initialized) {
+          _controller = TextEditingController(text: state.label);
+          _initialized = true;
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Label', style: TextStyle(color: Colors.white70, fontSize: 14)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _controller,
+              onChanged: (value) =>
+                  context.read<AlarmSetupBloc>().add(LabelChanged(value)),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'e.g. Morning alarm',
+                hintStyle: const TextStyle(color: Colors.white24),
+                filled: true,
+                fillColor: const Color(0xFF16213E),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Colors.deepPurple, width: 1.5),
+                ),
+              ),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: Colors.deepPurple, width: 1.5),
-            ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
 
-// Repeat Days 
+// Repeat Days
 class _RepeatDaysSection extends StatelessWidget {
   static const _days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -203,9 +233,9 @@ class _RepeatDaysSection extends StatelessWidget {
               children: List.generate(7, (index) {
                 final isSelected = state.repeatDays[index];
                 return GestureDetector(
-                  onTap: () => context
-                      .read<AlarmSetupBloc>()
-                      .add(RepeatDayToggled(index)),
+                  onTap: () => context.read<AlarmSetupBloc>().add(
+                    RepeatDayToggled(index),
+                  ),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     width: 40,
@@ -216,9 +246,7 @@ class _RepeatDaysSection extends StatelessWidget {
                           : const Color(0xFF16213E),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isSelected
-                            ? Colors.deepPurple
-                            : Colors.white24,
+                        color: isSelected ? Colors.deepPurple : Colors.white24,
                       ),
                     ),
                     child: Center(
@@ -262,11 +290,10 @@ class _ChallengeTypeSection extends StatelessWidget {
                   icon: '🧮',
                   label: 'Math',
                   subtitle: 'Solve 3-digit problems',
-                  isSelected:
-                      state.challengeType == AppConstants.mathChallenge,
+                  isSelected: state.challengeType == AppConstants.mathChallenge,
                   onTap: () => context.read<AlarmSetupBloc>().add(
-                        const ChallengeTypeChanged(AppConstants.mathChallenge),
-                      ),
+                    const ChallengeTypeChanged(AppConstants.mathChallenge),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 _ChallengeOption(
@@ -276,9 +303,8 @@ class _ChallengeTypeSection extends StatelessWidget {
                   isSelected:
                       state.challengeType == AppConstants.objectChallenge,
                   onTap: () => context.read<AlarmSetupBloc>().add(
-                        const ChallengeTypeChanged(
-                            AppConstants.objectChallenge),
-                      ),
+                    const ChallengeTypeChanged(AppConstants.objectChallenge),
+                  ),
                 ),
               ],
             ),
@@ -337,8 +363,7 @@ class _ChallengeOption extends StatelessWidget {
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style:
-                    const TextStyle(color: Colors.white38, fontSize: 11),
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
               ),
             ],
           ),

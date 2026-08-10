@@ -1,6 +1,9 @@
+import 'package:alarm_app/core/constants/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'data/repositories/alarm_repository.dart';
 import 'features/alarm_list/bloc/alarm_list_bloc.dart';
 import 'features/alarm_list/bloc/alarm_list_event.dart';
@@ -18,6 +21,13 @@ class AlarmApp extends StatefulWidget {
   State<AlarmApp> createState() => _AlarmAppState();
 }
 
+@pragma('vm:entry-point')
+void notificationBackgroundHandler(NotificationResponse response) async {
+  await Hive.initFlutter();
+  final activeBox = await Hive.openBox(AppConstants.activeAlarmBox);
+  await activeBox.put(AppConstants.activeAlarmKey, true);
+}
+
 class _AlarmAppState extends State<AlarmApp> {
   @override
   void initState() {
@@ -32,6 +42,10 @@ class _AlarmAppState extends State<AlarmApp> {
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ),
       onDidReceiveNotificationResponse: (response) {
+        // Set active alarm flag in main isolate ← new
+        final activeBox = Hive.box(AppConstants.activeAlarmBox);
+        activeBox.put(AppConstants.activeAlarmKey, true);
+
         // Navigate to trigger screen
         navigatorKey.currentState?.push(
           MaterialPageRoute(
@@ -42,6 +56,7 @@ class _AlarmAppState extends State<AlarmApp> {
           ),
         );
       },
+      onDidReceiveBackgroundNotificationResponse: notificationBackgroundHandler,
     );
   }
 
@@ -56,8 +71,8 @@ class _AlarmAppState extends State<AlarmApp> {
         useMaterial3: true,
       ),
       home: BlocProvider(
-        create: (_) => AlarmListBloc(AlarmRepository())
-          ..add(const LoadAlarms()),
+        create: (_) =>
+            AlarmListBloc(AlarmRepository())..add(const LoadAlarms()),
         child: const AlarmListScreen(),
       ),
     );

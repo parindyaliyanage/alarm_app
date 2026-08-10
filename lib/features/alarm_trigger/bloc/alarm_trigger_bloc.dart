@@ -1,7 +1,10 @@
 import 'dart:math';
+import 'package:alarm_app/core/constants/app_constants.dart';
+import 'package:alarm_app/services/foreground_alarm_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:hive/hive.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../services/alarm_scheduler_service.dart';
 import 'alarm_trigger_event.dart';
@@ -13,20 +16,18 @@ class AlarmTriggerBloc extends Bloc<AlarmTriggerEvent, AlarmTriggerState> {
   bool _isDisposed = false;
 
   AlarmTriggerBloc() : super(const AlarmTriggerState()) {
-
     on<AlarmStarted>((event, emit) async {
-      await WakelockPlus.enable();
+  await WakelockPlus.enable();
 
-      // Stop background player and take over with in-app player
-      await stopBackgroundAlarm();
+  // Stop background player and take over with in-app player
+  await stopBackgroundAlarm(); // ← back to this
 
-      // Start fresh in-app looping sound
-      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-      await _audioPlayer.play(AssetSource('sounds/alarm.mp3'));
+  // Start fresh in-app looping sound
+  await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+  await _audioPlayer.play(AssetSource('sounds/alarm.mp3'));
 
-      emit(_generateQuestion(state));
-    });
-
+  emit(_generateQuestion(state));
+});
     on<NewQuestionGenerated>((event, emit) {
       emit(_generateQuestion(state));
     });
@@ -40,10 +41,11 @@ class AlarmTriggerBloc extends Bloc<AlarmTriggerEvent, AlarmTriggerState> {
         if (remaining <= 0) {
           add(const AlarmDismissed());
         } else {
-          emit(_generateQuestion(state.copyWith(
-            questionsLeft: remaining,
-            isWrong: false,
-          )));
+          emit(
+            _generateQuestion(
+              state.copyWith(questionsLeft: remaining, isWrong: false),
+            ),
+          );
         }
       } else {
         emit(state.copyWith(isWrong: true, questionsLeft: 3));
@@ -58,9 +60,14 @@ class AlarmTriggerBloc extends Bloc<AlarmTriggerEvent, AlarmTriggerState> {
         _isDisposed = true;
         await _audioPlayer.stop();
         await WakelockPlus.disable();
-
-        // Also cancel the ongoing notification
         await FlutterLocalNotificationsPlugin().cancelAll();
+
+        // Stop foreground service ← new
+        await ForegroundAlarmService.stopAlarm();
+
+        // Clear active flag
+        final activeBox = Hive.box(AppConstants.activeAlarmBox);
+        await activeBox.put(AppConstants.activeAlarmKey, false);
       }
       emit(state.copyWith(status: AlarmStatus.solved));
     });
