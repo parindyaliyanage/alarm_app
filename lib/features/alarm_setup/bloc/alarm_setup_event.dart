@@ -1,3 +1,4 @@
+import 'package:alarm_app/data/models/alarm_model.dart';
 import 'package:equatable/equatable.dart';
 
 abstract class AlarmSetupEvent extends Equatable {
@@ -5,6 +6,14 @@ abstract class AlarmSetupEvent extends Equatable {
 
   @override
   List<Object?> get props => [];
+}
+
+class LoadAlarmForEdit extends AlarmSetupEvent {
+  final AlarmModel alarm;
+  const LoadAlarmForEdit(this.alarm);
+
+  @override
+  List<Object?> get props => [alarm];
 }
 
 // User changed the time

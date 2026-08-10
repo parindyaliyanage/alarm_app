@@ -1,5 +1,6 @@
 import 'package:alarm_app/features/alarm_trigger/bloc/alarm_trigger_bloc.dart';
 import 'package:alarm_app/features/alarm_trigger/view/alarm_trigger_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:io';
@@ -24,6 +25,13 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(AlarmModelAdapter());
   await Hive.openBox<AlarmModel>(AppConstants.alarmBox);
+
+  // Add after opening alarms box
+  await Hive.openBox(AppConstants.activeAlarmBox);
+
+  // Force default value on first launch
+  final activeBox = Hive.box(AppConstants.activeAlarmBox);
+  await activeBox.put(AppConstants.activeAlarmKey, false);
 
   // Initialize Notifications for both Android and iOS
   const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -51,25 +59,23 @@ void main() async {
   );
 
   // Platform-specific setup
-  if (Platform.isAndroid) {
+  if (!kIsWeb && Platform.isAndroid) {
     // Initialize Alarm Manager
     await AndroidAlarmManager.initialize();
 
     // Request notification permission (Android 13+)
     final androidPlugin = notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+          AndroidFlutterLocalNotificationsPlugin
+        >();
     await androidPlugin?.requestNotificationsPermission();
-  } else if (Platform.isIOS) {
+  } else if (!kIsWeb && Platform.isIOS) {
     // Request notification permission (iOS)
     final iosPlugin = notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
-    await iosPlugin?.requestPermissions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    await iosPlugin?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
   runApp(const AlarmApp());
