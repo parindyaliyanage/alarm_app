@@ -42,16 +42,23 @@ class _AlarmAppState extends State<AlarmApp> {
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ),
       onDidReceiveNotificationResponse: (response) {
-        // Set active alarm flag in main isolate ← new
         final activeBox = Hive.box(AppConstants.activeAlarmBox);
         activeBox.put(AppConstants.activeAlarmKey, true);
 
-        // Navigate to trigger screen
+        final challengeType =
+            activeBox.get(
+                  AppConstants.activeChallengeTypeKey,
+                  defaultValue: AppConstants.mathChallenge,
+                )
+                as String;
+
         navigatorKey.currentState?.push(
           MaterialPageRoute(
             builder: (_) => BlocProvider(
               create: (_) => AlarmTriggerBloc(),
-              child: const AlarmTriggerScreen(),
+              child: AlarmTriggerScreen(
+                challengeType: challengeType,
+              ), // ← correct
             ),
           ),
         );

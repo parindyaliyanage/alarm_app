@@ -4,9 +4,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/alarm_trigger_bloc.dart';
 import '../bloc/alarm_trigger_event.dart';
 import '../bloc/alarm_trigger_state.dart';
+import '../bloc/object_challenge_bloc.dart';
+import 'object_challenge_screen.dart';
+import '../../../core/constants/app_constants.dart';
 
 class AlarmTriggerScreen extends StatefulWidget {
-  const AlarmTriggerScreen({super.key});
+  final String challengeType;
+  const AlarmTriggerScreen({
+    super.key,
+    this.challengeType = AppConstants.mathChallenge,
+  });
 
   @override
   State<AlarmTriggerScreen> createState() => _AlarmTriggerScreenState();
@@ -18,8 +25,30 @@ class _AlarmTriggerScreenState extends State<AlarmTriggerScreen> {
   @override
   void initState() {
     super.initState();
-    // Start alarm as soon as screen opens
     context.read<AlarmTriggerBloc>().add(const AlarmStarted());
+
+    // Route to object challenge if needed
+    if (widget.challengeType == AppConstants.objectChallenge) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(
+                  value: context.read<AlarmTriggerBloc>(),
+                ),
+                BlocProvider(
+                  create: (_) => ObjectChallengeBloc(),
+                ),
+              ],
+              child: const ObjectChallengeScreen(),
+            ),
+          ),
+        );
+      });
+    }
   }
 
   @override
@@ -33,11 +62,10 @@ class _AlarmTriggerScreenState extends State<AlarmTriggerScreen> {
     return BlocListener<AlarmTriggerBloc, AlarmTriggerState>(
       listenWhen: (prev, curr) => curr.status == AlarmStatus.solved,
       listener: (context, state) {
-        // Alarm solved — close screen
         Navigator.of(context).pop();
       },
       child: PopScope(
-        canPop: false, // prevent back button dismissing alarm
+        canPop: false,
         child: Scaffold(
           backgroundColor: const Color(0xFF1A1A2E),
           body: BlocBuilder<AlarmTriggerBloc, AlarmTriggerState>(
@@ -45,7 +73,7 @@ class _AlarmTriggerScreenState extends State<AlarmTriggerScreen> {
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 color: state.isWrong
-                    ? Colors.red.withOpacity(0.3)
+                    ? Colors.red.withValues(alpha: 0.3)
                     : const Color(0xFF1A1A2E),
                 child: SafeArea(
                   child: Padding(
@@ -53,8 +81,6 @@ class _AlarmTriggerScreenState extends State<AlarmTriggerScreen> {
                     child: Column(
                       children: [
                         const Spacer(),
-
-                        // Clock icon + title
                         const Icon(
                           Icons.alarm,
                           size: 64,
@@ -77,28 +103,19 @@ class _AlarmTriggerScreenState extends State<AlarmTriggerScreen> {
                             fontSize: 14,
                           ),
                         ),
-
                         const Spacer(),
-
-                        // Progress indicator — questions remaining
                         _buildProgressDots(state.questionsLeft),
                         const SizedBox(height: 40),
-
-                        // Math question
                         Text(
                           state.question,
                           style: TextStyle(
-                            color: state.isWrong
-                                ? Colors.red
-                                : Colors.white,
+                            color: state.isWrong ? Colors.red : Colors.white,
                             fontSize: 42,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 2,
                           ),
                         ),
                         const SizedBox(height: 40),
-
-                        // Answer input
                         TextField(
                           controller: _answerController,
                           keyboardType: TextInputType.number,
@@ -136,8 +153,6 @@ class _AlarmTriggerScreenState extends State<AlarmTriggerScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-
-                        // Submit button
                         SizedBox(
                           width: double.infinity,
                           height: 56,
@@ -164,7 +179,6 @@ class _AlarmTriggerScreenState extends State<AlarmTriggerScreen> {
                             ),
                           ),
                         ),
-
                         const Spacer(),
                       ],
                     ),

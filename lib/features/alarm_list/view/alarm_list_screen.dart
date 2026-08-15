@@ -73,12 +73,18 @@ class _AlarmListScreenState extends State<AlarmListScreen>
 
               return GestureDetector(
                 onTap: () {
+                  final activeBox = Hive.box(AppConstants.activeAlarmBox);
+                  final challengeType = activeBox.get(
+                    AppConstants.activeChallengeTypeKey,
+                    defaultValue: AppConstants.mathChallenge,
+                  ) as String;
+
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => BlocProvider(
                         create: (_) => AlarmTriggerBloc(),
-                        child: const AlarmTriggerScreen(),
+                        child: AlarmTriggerScreen(challengeType: challengeType), // ← correct
                       ),
                     ),
                   );
@@ -262,7 +268,10 @@ class _AlarmCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: alarm.challengeType == AppConstants.mathChallenge
                           ? Colors.orange.withValues(alpha: 0.2)
@@ -273,7 +282,10 @@ class _AlarmCard extends StatelessWidget {
                       alarm.challengeType == AppConstants.mathChallenge
                           ? '🧮 Math'
                           : '📷 Object',
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -285,7 +297,9 @@ class _AlarmCard extends StatelessWidget {
                   value: alarm.isEnabled,
                   activeColor: Colors.deepPurple,
                   onChanged: (value) {
-                    context.read<AlarmListBloc>().add(ToggleAlarm(alarm.id, value));
+                    context.read<AlarmListBloc>().add(
+                      ToggleAlarm(alarm.id, value),
+                    );
                   },
                 ),
                 IconButton(
@@ -306,8 +320,9 @@ class _AlarmCard extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (_) => BlocProvider(
-          create: (_) => AlarmSetupBloc(AlarmRepository())
-            ..add(LoadAlarmForEdit(alarm)), // ← pre-fill with alarm data
+          create: (_) =>
+              AlarmSetupBloc(AlarmRepository())
+                ..add(LoadAlarmForEdit(alarm)), // ← pre-fill with alarm data
           child: const AlarmSetupScreen(),
         ),
       ),
@@ -322,12 +337,21 @@ class _AlarmCard extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF16213E),
-        title: const Text('Delete alarm?', style: TextStyle(color: Colors.white)),
-        content: const Text('This alarm will be removed.', style: TextStyle(color: Colors.white54)),
+        title: const Text(
+          'Delete alarm?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'This alarm will be removed.',
+          style: TextStyle(color: Colors.white54),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white54),
+            ),
           ),
           TextButton(
             onPressed: () {

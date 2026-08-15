@@ -15,15 +15,22 @@ AudioPlayer? _backgroundPlayer;
 void alarmCallback(int id) async {
   if (!Platform.isAndroid) return;
 
-  // ── 1. Play sound IMMEDIATELY ──
+  await Hive.initFlutter();
+  final activeBox = await Hive.openBox(AppConstants.activeAlarmBox);
+
+   // ── 1. Play sound IMMEDIATELY ──
   _backgroundPlayer = AudioPlayer();
   await _backgroundPlayer!.setReleaseMode(ReleaseMode.loop);
   await _backgroundPlayer!.play(AssetSource('sounds/alarm.mp3'));
 
-  // ── 2. Mark alarm as active in Hive ──
-  await Hive.initFlutter();
-  final activeBox = await Hive.openBox(AppConstants.activeAlarmBox);
+  // Read the challenge type for this alarm
+  final challengeType = activeBox.get(
+    'scheduled_challenge_$id',
+    defaultValue: AppConstants.mathChallenge,
+  ) as String;
+
   await activeBox.put(AppConstants.activeAlarmKey, true);
+  await activeBox.put(AppConstants.activeChallengeTypeKey, challengeType);
 
   // ── 3. Start foreground service to survive app clear ──
   ForegroundAlarmService.init();
@@ -70,19 +77,23 @@ Future<void> stopBackgroundAlarm() async {
 class AlarmSchedulerService {
 
   static Future<void> scheduleAlarm(AlarmModel alarm) async {
-    if (!Platform.isAndroid) return;
+  if (!Platform.isAndroid) return;
 
-    final scheduledTime = _nextAlarmTime(alarm.hour, alarm.minute);
-    await AndroidAlarmManager.oneShotAt(
-      scheduledTime,
-      _alarmId(alarm.id),
-      alarmCallback,
-      exact: true,
-      wakeup: true,
-      rescheduleOnReboot: true,
-    );
-    debugPrint('Alarm scheduled for $scheduledTime');
-  }
+  // Store alarm details so callback can read them
+  await Hive.initFlutter();
+  final box = await Hive.openBox(AppConstants.activeAlarmBox);
+  await box.put('scheduled_challenge_${_alarmId(alarm.id)}', alarm.challengeType);
+
+  final scheduledTime = _nextAlarmTime(alarm.hour, alarm.minute);
+  await AndroidAlarmManager.oneShotAt(
+    scheduledTime,
+    _alarmId(alarm.id),
+    alarmCallback,
+    exact: true,
+    wakeup: true,
+    rescheduleOnReboot: true,
+  );
+}
 
   static Future<void> cancelAlarm(String alarmId) async {
     if (!Platform.isAndroid) return;
