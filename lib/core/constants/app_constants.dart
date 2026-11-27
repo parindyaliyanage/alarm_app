@@ -15,6 +15,10 @@ class AppConstants {
 
   static const String activeChallengeTypeKey = 'active_challenge_type';
 
+  // App settings (theme choice etc.)
+  static const String settingsBox = 'settings';
+  static const String themeKey = 'theme';
+
   // 20 curated objects from COCO dataset
   static const List<String> detectableObjects = [
     'toothbrush',

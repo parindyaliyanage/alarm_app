@@ -79,6 +79,7 @@ flutter:
     - assets/sounds/alarm.mp3
     - assets/models/efficientdet_lite0.tflite
     - assets/models/labels.txt
+    - assets/logos/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

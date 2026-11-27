@@ -10,6 +10,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'data/models/alarm_model.dart';
 import 'core/constants/app_constants.dart';
+import 'core/theme/theme_controller.dart';
 import 'app.dart';
 
 final FlutterLocalNotificationsPlugin notificationsPlugin =
@@ -28,6 +29,10 @@ void main() async {
 
   // Add after opening alarms box
   await Hive.openBox(AppConstants.activeAlarmBox);
+
+  // Settings (saved theme choice)
+  await Hive.openBox(AppConstants.settingsBox);
+  ThemeController.instance.load();
 
   // Force default value on first launch
   final activeBox = Hive.box(AppConstants.activeAlarmBox);

@@ -4,12 +4,14 @@ import '../bloc/alarm_setup_bloc.dart';
 import '../bloc/alarm_setup_event.dart';
 import '../bloc/alarm_setup_state.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/theme/app_theme.dart';
 
 class AlarmSetupScreen extends StatelessWidget {
   const AlarmSetupScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return BlocListener<AlarmSetupBloc, AlarmSetupState>(
       listenWhen: (prev, curr) => curr.isSaved || curr.errorMessage != null,
       listener: (context, state) {
@@ -20,24 +22,18 @@ class AlarmSetupScreen extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.errorMessage!),
-              backgroundColor: Colors.red,
+              backgroundColor: p.error,
             ),
           );
         }
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF1A1A2E),
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1A1A2E),
-          iconTheme: const IconThemeData(color: Colors.white),
           title: BlocBuilder<AlarmSetupBloc, AlarmSetupState>(
             builder: (context, state) {
               return Text(
                 state.isEditing ? 'Edit Alarm' : 'New Alarm', // ← dynamic title
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(color: p.text, fontWeight: FontWeight.bold),
               );
             },
           ),
@@ -54,15 +50,12 @@ class AlarmSetupScreen extends StatelessWidget {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.deepPurple,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text(
+                      : Text(
                           'Save',
                           style: TextStyle(
-                            color: Colors.deepPurple,
+                            color: p.primary,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                           ),
@@ -97,23 +90,15 @@ class AlarmSetupScreen extends StatelessWidget {
 class _TimePickerSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return BlocBuilder<AlarmSetupBloc, AlarmSetupState>(
       builder: (context, state) {
         return GestureDetector(
           onTap: () async {
+            // Picker colors come from timePickerTheme in app_theme.dart
             final picked = await showTimePicker(
               context: context,
               initialTime: TimeOfDay(hour: state.hour, minute: state.minute),
-              builder: (context, child) {
-                return Theme(
-                  data: ThemeData.dark().copyWith(
-                    colorScheme: const ColorScheme.dark(
-                      primary: Colors.deepPurple,
-                    ),
-                  ),
-                  child: child!,
-                );
-              },
             );
             if (picked != null && context.mounted) {
               context.read<AlarmSetupBloc>().add(
@@ -125,25 +110,25 @@ class _TimePickerSection extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 24),
             decoration: BoxDecoration(
-              color: const Color(0xFF16213E),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.deepPurple.withOpacity(0.4)),
+              color: p.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: p.primary.withValues(alpha: 0.4)),
             ),
             child: Column(
               children: [
                 Text(
                   state.formattedTime,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: p.text,
                     fontSize: 64,
                     fontWeight: FontWeight.w200,
                     letterSpacing: 4,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Tap to change time',
-                  style: TextStyle(color: Colors.white38, fontSize: 13),
+                  style: TextStyle(color: p.textMuted, fontSize: 13),
                 ),
               ],
             ),
@@ -154,7 +139,6 @@ class _TimePickerSection extends StatelessWidget {
   }
 }
 
-// In _LabelSection — replace StatelessWidget with StatefulWidget
 class _LabelSection extends StatefulWidget {
   @override
   State<_LabelSection> createState() => _LabelSectionState();
@@ -172,6 +156,7 @@ class _LabelSectionState extends State<_LabelSection> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return BlocBuilder<AlarmSetupBloc, AlarmSetupState>(
       builder: (context, state) {
         // Initialize controller once with existing label
@@ -183,27 +168,15 @@ class _LabelSectionState extends State<_LabelSection> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Label', style: TextStyle(color: Colors.white70, fontSize: 14)),
+            Text('Label', style: TextStyle(color: p.textMuted, fontSize: 14)),
             const SizedBox(height: 8),
+            // Field styling comes from inputDecorationTheme in app_theme.dart
             TextField(
               controller: _controller,
               onChanged: (value) =>
                   context.read<AlarmSetupBloc>().add(LabelChanged(value)),
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'e.g. Morning alarm',
-                hintStyle: const TextStyle(color: Colors.white24),
-                filled: true,
-                fillColor: const Color(0xFF16213E),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.deepPurple, width: 1.5),
-                ),
-              ),
+              style: TextStyle(color: p.text),
+              decoration: const InputDecoration(hintText: 'e.g. Morning alarm'),
             ),
           ],
         );
@@ -218,15 +191,13 @@ class _RepeatDaysSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return BlocBuilder<AlarmSetupBloc, AlarmSetupState>(
       builder: (context, state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Repeat',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
-            ),
+            Text('Repeat', style: TextStyle(color: p.textMuted, fontSize: 14)),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -241,19 +212,17 @@ class _RepeatDaysSection extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.deepPurple
-                          : const Color(0xFF16213E),
+                      color: isSelected ? p.primary : p.surface,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isSelected ? Colors.deepPurple : Colors.white24,
+                        color: isSelected ? p.primary : p.border,
                       ),
                     ),
                     child: Center(
                       child: Text(
                         _days[index],
                         style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.white38,
+                          color: isSelected ? p.onPrimary : p.textMuted,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
@@ -274,20 +243,21 @@ class _RepeatDaysSection extends StatelessWidget {
 class _ChallengeTypeSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return BlocBuilder<AlarmSetupBloc, AlarmSetupState>(
       builder: (context, state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Challenge Type',
-              style: TextStyle(color: Colors.white70, fontSize: 14),
+              style: TextStyle(color: p.textMuted, fontSize: 14),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
                 _ChallengeOption(
-                  icon: '🧮',
+                  icon: Icons.calculate_outlined,
                   label: 'Math',
                   subtitle: 'Solve 3-digit problems',
                   isSelected: state.challengeType == AppConstants.mathChallenge,
@@ -297,7 +267,7 @@ class _ChallengeTypeSection extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 _ChallengeOption(
-                  icon: '📷',
+                  icon: Icons.camera_alt_outlined,
                   label: 'Object',
                   subtitle: 'Show a random object',
                   isSelected:
@@ -316,7 +286,7 @@ class _ChallengeTypeSection extends StatelessWidget {
 }
 
 class _ChallengeOption extends StatelessWidget {
-  final String icon;
+  final IconData icon;
   final String label;
   final String subtitle;
   final bool isSelected;
@@ -332,6 +302,7 @@ class _ChallengeOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -339,31 +310,38 @@ class _ChallengeOption extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isSelected
-                ? Colors.deepPurple.withOpacity(0.2)
-                : const Color(0xFF16213E),
+            color: isSelected ? p.accentContainer : p.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? Colors.deepPurple : Colors.white12,
+              color: isSelected ? p.primary : p.border,
               width: isSelected ? 2 : 1,
             ),
           ),
           child: Column(
             children: [
-              Text(icon, style: const TextStyle(fontSize: 32)),
-              const SizedBox(height: 8),
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected ? p.primary : p.surfaceRaised,
+                ),
+                child: Icon(
+                  icon,
+                  color: isSelected ? p.onPrimary : p.highlight,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(height: 10),
               Text(
                 label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(color: p.text, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white38, fontSize: 11),
+                style: TextStyle(color: p.textMuted, fontSize: 11),
               ),
             ],
           ),

@@ -6,6 +6,7 @@ import '../bloc/object_challenge_event.dart';
 import '../bloc/object_challenge_state.dart';
 import '../bloc/alarm_trigger_bloc.dart';
 import '../bloc/alarm_trigger_event.dart';
+import '../../../core/theme/app_theme.dart';
 
 class ObjectChallengeScreen extends StatefulWidget {
   const ObjectChallengeScreen({super.key});
@@ -23,6 +24,10 @@ class _ObjectChallengeScreenState extends State<ObjectChallengeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final p = context.palette;
+    // Translucent panel color for overlays on top of the camera feed
+    final overlay = p.background.withValues(alpha: 0.75);
+
     return BlocConsumer<ObjectChallengeBloc, ObjectChallengeState>(
       listener: (context, state) {
         if (state.status == ObjectChallengeStatus.detected) {
@@ -36,11 +41,12 @@ class _ObjectChallengeScreenState extends State<ObjectChallengeScreen> {
         }
       },
       builder: (context, state) {
+        final lowTime = state.secondsRemaining < 30;
+
         return Scaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: p.background,
           body: Stack(
             children: [
-
               // ── Camera preview ──
               if (state.status == ObjectChallengeStatus.scanning ||
                   state.status == ObjectChallengeStatus.detected)
@@ -48,15 +54,15 @@ class _ObjectChallengeScreenState extends State<ObjectChallengeScreen> {
 
               // ── Loading overlay ──
               if (state.status == ObjectChallengeStatus.loading)
-                const Center(
+                Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircularProgressIndicator(color: Colors.deepPurple),
-                      SizedBox(height: 16),
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
                       Text(
                         'Starting camera...',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
+                        style: TextStyle(color: p.text, fontSize: 16),
                       ),
                     ],
                   ),
@@ -73,23 +79,24 @@ class _ObjectChallengeScreenState extends State<ObjectChallengeScreen> {
                       margin: const EdgeInsets.all(16),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        borderRadius: BorderRadius.circular(16),
+                        color: overlay,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: p.border),
                       ),
                       child: Column(
                         children: [
-                          const Text(
+                          Text(
                             'Show this object to the camera',
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: p.textMuted,
                               fontSize: 14,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             state.targetObject.toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: p.highlight,
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 2,
@@ -103,26 +110,22 @@ class _ObjectChallengeScreenState extends State<ObjectChallengeScreen> {
                             children: [
                               Icon(
                                 Icons.timer,
-                                color: state.secondsRemaining < 30
-                                    ? Colors.red
-                                    : Colors.white54,
+                                color: lowTime ? p.error : p.textMuted,
                                 size: 16,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 state.formattedTime,
                                 style: TextStyle(
-                                  color: state.secondsRemaining < 30
-                                      ? Colors.red
-                                      : Colors.white54,
+                                  color: lowTime ? p.error : p.textMuted,
                                   fontSize: 14,
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              const Text(
+                              Text(
                                 '→ math fallback',
                                 style: TextStyle(
-                                  color: Colors.white30,
+                                  color: p.textMuted.withValues(alpha: 0.6),
                                   fontSize: 12,
                                 ),
                               ),
@@ -143,29 +146,25 @@ class _ObjectChallengeScreenState extends State<ObjectChallengeScreen> {
                   child: Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
+                        color: overlay,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          SizedBox(
+                          const SizedBox(
                             width: 12,
                             height: 12,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.deepPurple,
-                            ),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           ),
-                          SizedBox(width: 8),
+                          const SizedBox(width: 8),
                           Text(
                             'Scanning...',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
-                            ),
+                            style: TextStyle(color: p.textMuted, fontSize: 14),
                           ),
                         ],
                       ),
@@ -176,25 +175,37 @@ class _ObjectChallengeScreenState extends State<ObjectChallengeScreen> {
               // ── Success overlay ──
               if (state.status == ObjectChallengeStatus.detected)
                 Container(
-                  color: Colors.green.withValues(alpha: 0.7),
-                  child: const Center(
+                  color: p.background.withValues(alpha: 0.8),
+                  child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.check_circle, color: Colors.white, size: 80),
-                        SizedBox(height: 16),
+                        Container(
+                          width: 96,
+                          height: 96,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: p.gradient,
+                          ),
+                          child: Icon(
+                            Icons.check,
+                            color: p.onPrimary,
+                            size: 56,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         Text(
                           'Object Detected!',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: p.text,
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text(
                           'Dismissing alarm...',
-                          style: TextStyle(color: Colors.white70, fontSize: 16),
+                          style: TextStyle(color: p.textMuted, fontSize: 16),
                         ),
                       ],
                     ),
@@ -208,13 +219,10 @@ class _ObjectChallengeScreenState extends State<ObjectChallengeScreen> {
   }
 
   Widget _buildCameraPreview(BuildContext context) {
-    final controller =
-        context.read<ObjectChallengeBloc>().cameraController;
+    final controller = context.read<ObjectChallengeBloc>().cameraController;
     if (controller == null || !controller.value.isInitialized) {
       return const SizedBox.shrink();
     }
-    return SizedBox.expand(
-      child: CameraPreview(controller),
-    );
+    return SizedBox.expand(child: CameraPreview(controller));
   }
 }

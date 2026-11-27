@@ -78,9 +78,9 @@ class ObjectDetectionService {
     final numDetections = count[0].toInt();
 
     for (int i = 0; i < numDetections; i++) {
-      final score = (scores as List)[0][i] as double;
+      final score = (scores)[0][i] as double;
       if (score > 0.5) {
-        final classId = ((classes as List)[0][i] as double).toInt();
+        final classId = ((classes)[0][i] as double).toInt();
         if (classId < _labels.length) {
           results.add(DetectionResult(
             label: _labels[classId].toLowerCase(),

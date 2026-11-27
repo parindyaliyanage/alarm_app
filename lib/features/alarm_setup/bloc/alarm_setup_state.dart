@@ -38,6 +38,7 @@ class AlarmSetupState extends Equatable {
     String? errorMessage,
   }) {
     return AlarmSetupState(
+      editingAlarmId: editingAlarmId, // keep the ID so edits overwrite
       hour: hour ?? this.hour,
       minute: minute ?? this.minute,
       label: label ?? this.label,
@@ -55,6 +56,7 @@ class AlarmSetupState extends Equatable {
 
   @override
   List<Object?> get props => [
+        editingAlarmId,
         hour,
         minute,
         label,
