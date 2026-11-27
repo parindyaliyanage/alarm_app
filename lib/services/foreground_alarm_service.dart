@@ -1,5 +1,4 @@
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 @pragma('vm:entry-point')
 class AlarmForegroundHandler extends TaskHandler {
